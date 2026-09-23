@@ -1,4 +1,4 @@
-﻿Date,Machine,Units_Produced,Defective_Units,Quality_Rate
+﻿Date,Machine,Units_Produced,Defective_Units,Quality_Rate 
 2025-01-01,Machine CNC,682,57,91.64
 2025-01-01,Tour industriel,754,50,93.37
 2025-01-01,Fraiseuse industrielle,895,49,94.53
