@@ -28,6 +28,7 @@ st.markdown("""
 
 h1 {
     color: #1F2937;
+    font-weight: 700;
 }
 
 h2, h3 {
@@ -36,9 +37,48 @@ h2, h3 {
 
 [data-testid="stMetric"] {
     background-color: white;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    border: 1px solid #E5E7EB;
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 15px;
+}
+
+[data-testid="stMetricValue"] {
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.insight-card {
+    background-color: white;
+    padding: 22px;
+    border-radius: 14px;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+    min-height: 150px;
+}
+
+.insight-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 10px;
+}
+
+.insight-text {
+    font-size: 15px;
+    color: #4B5563;
+    line-height: 1.6;
+}
+
+.footer {
+    text-align: center;
+    color: #9CA3AF;
+    font-size: 14px;
+    padding: 20px;
 }
 
 </style>
@@ -52,7 +92,6 @@ h2, h3 {
 @st.cache_data
 def load_data():
 
-    # Read CSV
     df = pd.read_csv("Qualite_industrielle.csv")
 
     # Clean column names
@@ -70,13 +109,10 @@ def load_data():
 
         clean_col = col.lower()
 
-        if clean_col in ["date"]:
+        if clean_col == "date":
             column_mapping[col] = "Date"
 
-        elif clean_col in [
-            "machine",
-            "machines"
-        ]:
+        elif clean_col in ["machine", "machines"]:
             column_mapping[col] = "Machine"
 
         elif clean_col in [
@@ -105,7 +141,7 @@ def load_data():
 
     df = df.rename(columns=column_mapping)
 
-    # Verify required columns
+    # Required columns
     required_columns = [
         "Date",
         "Machine",
@@ -126,26 +162,30 @@ def load_data():
         )
 
         st.write(
-            "Columns detected in the CSV:"
+            "Columns detected:"
         )
 
-        st.write(df.columns.tolist())
+        st.write(
+            df.columns.tolist()
+        )
 
         st.write(
             "Missing columns:"
         )
 
-        st.write(missing_columns)
+        st.write(
+            missing_columns
+        )
 
         st.stop()
 
-    # Convert Date
+    # Convert date
     df["Date"] = pd.to_datetime(
         df["Date"],
         errors="coerce"
     )
 
-    # Convert numeric columns
+    # Convert numerical columns
     numeric_columns = [
         "Units_Produced",
         "Defective_Units",
@@ -159,17 +199,16 @@ def load_data():
             errors="coerce"
         )
 
-        # Replace missing values with median
         df[col] = df[col].fillna(
             df[col].median()
         )
 
-    # Remove rows without valid date
+    # Remove invalid dates
     df = df.dropna(
         subset=["Date"]
     )
 
-    # Sort data
+    # Sort
     df = df.sort_values(
         "Date"
     )
@@ -206,7 +245,7 @@ st.divider()
 
 
 # ============================================================
-# SIDEBAR FILTER
+# SIDEBAR
 # ============================================================
 
 st.sidebar.title(
@@ -273,8 +312,33 @@ number_machines = (
 
 
 # ============================================================
-# KPI DISPLAY
+# FORMAT PRODUCTION
 # ============================================================
+
+def format_number(value):
+
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.2f}M"
+
+    elif value >= 1_000:
+        return f"{value / 1_000:.1f}K"
+
+    else:
+        return f"{value:,.0f}"
+
+
+production_display = format_number(
+    total_units
+)
+
+
+# ============================================================
+# KPI SECTION
+# ============================================================
+
+st.subheader(
+    "📊 Executive Overview"
+)
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -291,15 +355,15 @@ with col2:
 
     st.metric(
         "📦 Total Production",
-        f"{total_units:,.0f}"
+        production_display
     )
 
 
 with col3:
 
     st.metric(
-        "❌ Defective Units",
-        f"{total_defective:,.0f}"
+        "❌ Defect Rate",
+        f"{defect_rate:.2f}%"
     )
 
 
@@ -315,7 +379,7 @@ st.divider()
 
 
 # ============================================================
-# QUALITY RATE EVOLUTION
+# QUALITY EVOLUTION
 # ============================================================
 
 st.subheader(
@@ -341,7 +405,8 @@ fig_quality = px.line(
 fig_quality.update_layout(
     xaxis_title="Date",
     yaxis_title="Quality Rate (%)",
-    hovermode="x unified"
+    hovermode="x unified",
+    template="plotly_white"
 )
 
 
@@ -366,7 +431,7 @@ st.plotly_chart(
 
 
 # ============================================================
-# MACHINE PERFORMANCE ANALYSIS
+# MACHINE PERFORMANCE
 # ============================================================
 
 st.subheader(
@@ -466,7 +531,7 @@ machine_analysis[
 
 
 # ============================================================
-# SORT MACHINES
+# SORT
 # ============================================================
 
 machine_analysis = (
@@ -500,7 +565,19 @@ fig_machine.update_traces(
 
 fig_machine.update_layout(
     xaxis_title="Average Quality Rate (%)",
-    yaxis_title="Machine"
+    yaxis_title="Machine",
+    template="plotly_white",
+    xaxis=dict(
+        range=[
+            max(
+                0,
+                machine_analysis[
+                    "Average_Quality"
+                ].min() - 2
+            ),
+            100
+        ]
+    )
 )
 
 
@@ -545,7 +622,8 @@ with col_left:
 
     fig_stability.update_layout(
         xaxis_title="Quality Variability",
-        yaxis_title="Average Quality (%)"
+        yaxis_title="Average Quality (%)",
+        template="plotly_white"
     )
 
 
@@ -583,7 +661,8 @@ with col_right:
 
     fig_defects.update_layout(
         xaxis_title="Total Units Produced",
-        yaxis_title="Total Defective Units"
+        yaxis_title="Total Defective Units",
+        template="plotly_white"
     )
 
 
@@ -666,13 +745,11 @@ if len(low_quality_days) > 0:
         "Quality_Rate"
     ]
 
-
     anomaly_df[
         "Quality_Rate"
     ] = anomaly_df[
         "Quality_Rate"
     ].round(2)
-
 
     st.dataframe(
         anomaly_df.head(15),
@@ -688,8 +765,176 @@ else:
 
 
 # ============================================================
+# INDUSTRIAL INSIGHTS
+# ============================================================
+
+st.divider()
+
+st.subheader(
+    "💡 Industrial Insights"
+)
+
+
+best_machine = (
+    machine_analysis
+    .iloc[0]
+)
+
+
+worst_machine = (
+    machine_analysis
+    .iloc[-1]
+)
+
+
+best_machine_name = (
+    best_machine["Machine"]
+)
+
+best_machine_quality = (
+    best_machine["Average_Quality"]
+)
+
+worst_machine_name = (
+    worst_machine["Machine"]
+)
+
+worst_machine_quality = (
+    worst_machine["Average_Quality"]
+)
+
+
+insight1, insight2 = st.columns(2)
+
+
+with insight1:
+
+    st.markdown(
+        f"""
+        <div class="insight-card">
+
+        <div class="insight-title">
+        🥇 Highest Quality Performance
+        </div>
+
+        <div class="insight-text">
+
+        <b>{best_machine_name}</b>
+        recorded the highest average quality
+        rate among the analyzed machines.
+
+        <br><br>
+
+        Average Quality:
+        <b>{best_machine_quality:.2f}%</b>
+
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+with insight2:
+
+    st.markdown(
+        f"""
+        <div class="insight-card">
+
+        <div class="insight-title">
+        ⚠️ Lowest Quality Performance
+        </div>
+
+        <div class="insight-text">
+
+        <b>{worst_machine_name}</b>
+        recorded the lowest average quality
+        rate in the dataset.
+
+        <br><br>
+
+        Average Quality:
+        <b>{worst_machine_quality:.2f}%</b>
+
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+st.write("")
+
+
+insight3, insight4 = st.columns(2)
+
+
+with insight3:
+
+    st.markdown(
+        f"""
+        <div class="insight-card">
+
+        <div class="insight-title">
+        📉 Quality Monitoring
+        </div>
+
+        <div class="insight-text">
+
+        The overall average quality rate is
+        <b>{global_quality:.2f}%</b>.
+
+        The statistical detection threshold
+        is <b>{threshold:.2f}%</b>.
+
+        <br><br>
+
+        <b>{len(low_quality_days)}</b>
+        low-quality days were detected.
+
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+with insight4:
+
+    st.markdown(
+        f"""
+        <div class="insight-card">
+
+        <div class="insight-title">
+        🏭 Production Quality
+        </div>
+
+        <div class="insight-text">
+
+        The analyzed production volume is
+        <b>{production_display}</b> units.
+
+        <br><br>
+
+        The overall defective-unit rate is
+        <b>{defect_rate:.2f}%</b>.
+
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# ============================================================
 # MACHINE PERFORMANCE TABLE
 # ============================================================
+
+st.divider()
 
 st.subheader(
     "📋 Machine Performance Details"
@@ -713,7 +958,6 @@ display_table.columns = [
 ]
 
 
-# Round values
 display_table[
     "Average Quality (%)"
 ] = display_table[
@@ -757,20 +1001,8 @@ st.dataframe(
 
 
 # ============================================================
-# TOP PERFORMING MACHINE
+# PERFORMANCE SUMMARY
 # ============================================================
-
-best_machine = (
-    machine_analysis
-    .iloc[0]
-)
-
-
-worst_machine = (
-    machine_analysis
-    .iloc[-1]
-)
-
 
 st.divider()
 
@@ -786,12 +1018,11 @@ with col1:
 
     st.info(
         f"""
-        **Highest Average Quality**
+        **🥇 Highest Average Quality**
 
-        🥇 {best_machine["Machine"]}
+        {best_machine_name}
 
-        Quality Rate:
-        **{best_machine["Average_Quality"]:.2f}%**
+        **Quality Rate: {best_machine_quality:.2f}%**
         """
     )
 
@@ -800,12 +1031,11 @@ with col2:
 
     st.warning(
         f"""
-        **Lowest Average Quality**
+        **⚠️ Lowest Average Quality**
 
-        ⚠️ {worst_machine["Machine"]}
+        {worst_machine_name}
 
-        Quality Rate:
-        **{worst_machine["Average_Quality"]:.2f}%**
+        **Quality Rate: {worst_machine_quality:.2f}%**
         """
     )
 
@@ -816,8 +1046,17 @@ with col2:
 
 st.divider()
 
+st.markdown(
+    """
+    <div class="footer">
 
-st.caption(
-    "Industrial Quality Analytics 2025 "
-    "• Python • Pandas • Plotly • Streamlit"
+    <b>Industrial Quality Analytics 2025</b>
+    <br>
+    Python • Pandas • Plotly • Streamlit
+    <br>
+    Industrial Data Analysis & Machine Performance Monitoring
+
+    </div>
+    """,
+    unsafe_allow_html=True
 )
